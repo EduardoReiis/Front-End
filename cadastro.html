@@ -3,35 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro - Contas a Receber</title>
+    <title>Cadastro - Sistema de Contas a Receber</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h1>Criar Conta</h1>
+            <div class="logo">
+                <h1>📋</h1>
+                <h2>Criar Conta</h2>
+                <p>Preencha os dados para se cadastrar</p>
+            </div>
+            
             <form id="formCadastro">
                 <div class="form-group">
                     <label for="nome">Nome Completo</label>
-                    <input type="text" id="nome" name="nome" required placeholder="Digite seu nome completo">
+                    <input type="text" id="nome" name="nome" placeholder="Digite seu nome completo" required>
                 </div>
+                
                 <div class="form-group">
                     <label for="email">E-mail</label>
-                    <input type="email" id="email" name="email" required placeholder="Digite seu e-mail">
+                    <input type="email" id="email" name="email" placeholder="Digite seu e-mail" required>
                 </div>
+                
                 <div class="form-group">
                     <label for="senha">Senha</label>
-                    <input type="password" id="senha" name="senha" required placeholder="Digite sua senha" minlength="6">
+                    <input type="password" id="senha" name="senha" placeholder="Digite sua senha (mín. 6 caracteres)" required minlength="6">
                 </div>
+                
                 <div class="form-group">
                     <label for="confirmarSenha">Confirmar Senha</label>
-                    <input type="password" id="confirmarSenha" name="confirmarSenha" required placeholder="Confirme sua senha">
+                    <input type="password" id="confirmarSenha" name="confirmarSenha" placeholder="Confirme sua senha" required>
                 </div>
-                <div id="mensagem" class="mensagem-erro" style="display: none;"></div>
+                
+                <div id="mensagemErro" class="mensagem-erro"></div>
+                
                 <button type="submit" class="btn btn-primary">Cadastrar</button>
             </form>
+            
             <div class="links">
-                <a href="index.html">Já tenho uma conta</a>
+                <p>Já tem uma conta? <a href="index.html">Fazer login</a></p>
             </div>
         </div>
     </div>
@@ -41,39 +52,37 @@
             e.preventDefault();
             
             const nome = document.getElementById('nome').value.trim();
-            const email = document.getElementById('email').value.trim();
+            const email = document.getElementById('email').value.trim().toLowerCase();
             const senha = document.getElementById('senha').value;
             const confirmarSenha = document.getElementById('confirmarSenha').value;
-            const mensagem = document.getElementById('mensagem');
+            const mensagemErro = document.getElementById('mensagemErro');
+            
+            // Limpar mensagem anterior
+            mensagemErro.textContent = '';
+            mensagemErro.className = 'mensagem-erro';
             
             // Validar se as senhas coincidem
             if (senha !== confirmarSenha) {
-                mensagem.textContent = 'As senhas não coincidem. Por favor, verifique.';
-                mensagem.style.display = 'block';
-                mensagem.style.color = '#e74c3c';
+                mensagemErro.textContent = 'As senhas não coincidem!';
+                mensagemErro.classList.add('erro');
                 return;
             }
             
             // Validar tamanho mínimo da senha
             if (senha.length < 6) {
-                mensagem.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                mensagem.style.display = 'block';
-                mensagem.style.color = '#e74c3c';
+                mensagemErro.textContent = 'A senha deve ter no mínimo 6 caracteres!';
+                mensagemErro.classList.add('erro');
                 return;
             }
             
             // Buscar usuários existentes
-            const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+            let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
             
-            // Verificar se o email já está cadastrado
-            const emailExiste = usuarios.find(user => 
-                user.email.toLowerCase() === email.toLowerCase()
-            );
-            
+            // Verificar se e-mail já existe
+            const emailExiste = usuarios.some(user => user.email === email);
             if (emailExiste) {
-                mensagem.textContent = 'Este e-mail já está cadastrado. Faça login ou use outro e-mail.';
-                mensagem.style.display = 'block';
-                mensagem.style.color = '#e74c3c';
+                mensagemErro.textContent = 'Este e-mail já está cadastrado!';
+                mensagemErro.classList.add('erro');
                 return;
             }
             
@@ -86,37 +95,28 @@
                 dataCadastro: new Date().toISOString()
             };
             
-            // Adicionar ao array de usuários
-            usuarios.push(novoUsuario);
-            
             // Salvar no localStorage
+            usuarios.push(novoUsuario);
             localStorage.setItem('usuarios', JSON.stringify(usuarios));
             
             // Mostrar mensagem de sucesso
-            mensagem.textContent = 'Conta criada com sucesso! Redirecionando para o login...';
-            mensagem.style.display = 'block';
-            mensagem.style.color = '#27ae60';
+            mensagemErro.textContent = 'Cadastro realizado com sucesso! Redirecionando...';
+            mensagemErro.classList.add('sucesso');
             
-            // Limpar formulário
-            document.getElementById('formCadastro').reset();
-            
-            // Redirecionar para login após 2 segundos
+            // Redirecionar para a página de login (index.html)
             setTimeout(function() {
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
             }, 2000);
         });
-
-        // Limpar mensagem quando o usuário começar a digitar
+        
+        // Limpar mensagem de erro ao digitar
         const inputs = document.querySelectorAll('input');
-        inputs.forEach(input => {
+        inputs.forEach(function(input) {
             input.addEventListener('input', function() {
-                document.getElementById('mensagem').style.display = 'none';
+                document.getElementById('mensagemErro').textContent = '';
+                document.getElementById('mensagemErro').className = 'mensagem-erro';
             });
         });
     </script>
-</body>
-</html>
-
-    <script src="js/script.js"></script>
 </body>
 </html>
