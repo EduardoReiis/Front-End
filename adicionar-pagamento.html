@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Pagamento - Contas a Receber</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>Adicionar Pagamento</h1>
+                <p>Cadastre um novo pagamento a receber</p>
+            </div>
+            
+            <form id="formPagamento">
+                <div class="form-group">
+                    <label for="dataPagamento">Data do Pagamento</label>
+                    <input type="date" id="dataPagamento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="numeroDocumento">Número do Documento</label>
+                    <input type="text" id="numeroDocumento" placeholder="Ex: DOC-001" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nomeCliente">Nome do Cliente</label>
+                    <input type="text" id="nomeCliente" placeholder="Nome completo do cliente" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="vencimento">Data de Vencimento</label>
+                    <input type="date" id="vencimento" required>
+                    <small class="helper-text">Máximo de 15 dias a partir da data do pagamento</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="valor">Valor (R$)</label>
+                    <input type="number" id="valor" placeholder="0,00" step="0.01" min="0.01" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    Cadastrar Pagamento
+                </button>
+            </form>
+            
+            <div class="card-footer">
+                <a href="lista-pagamentos.html" class="link">Ver pagamentos cadastrados →</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Definir data mínima como hoje
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('dataPagamento').setAttribute('min', hoje);
+        document.getElementById('dataPagamento').value = hoje;
+
+        // Atualizar limite de vencimento quando a data do pagamento mudar
+        document.getElementById('dataPagamento').addEventListener('change', function() {
+            atualizarLimiteVencimento();
+        });
+
+        function atualizarLimiteVencimento() {
+            const dataPagamento = document.getElementById('dataPagamento').value;
+            if (dataPagamento) {
+                const data = new Date(dataPagamento);
+                
+                // Data mínima de vencimento = data do pagamento
+                const minVencimento = dataPagamento;
+                
+                // Data máxima de vencimento = data do pagamento + 15 dias
+                const maxData = new Date(data);
+                maxData.setDate(maxData.getDate() + 15);
+                const maxVencimento = maxData.toISOString().split('T')[0];
+                
+                const inputVencimento = document.getElementById('vencimento');
+                inputVencimento.setAttribute('min', minVencimento);
+                inputVencimento.setAttribute('max', maxVencimento);
+                inputVencimento.value = minVencimento;
+            }
+        }
+
+        // Inicializar limite de vencimento
+        atualizarLimiteVencimento();
+
+        // Processar formulário
+        document.getElementById('formPagamento').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dataPagamento = document.getElementById('dataPagamento').value;
+            const numeroDocumento = document.getElementById('numeroDocumento').value.trim();
+            const nomeCliente = document.getElementById('nomeCliente').value.trim();
+            const vencimento = document.getElementById('vencimento').value;
+            const valor = parseFloat(document.getElementById('valor').value);
+            
+            // Validar se a data de vencimento está dentro do limite de 15 dias
+            const dataP = new Date(dataPagamento);
+            const dataV = new Date(vencimento);
+            const diffTime = dataV - dataP;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+            
+            if (diffDays < 0) {
+                alert('A data de vencimento não pode ser anterior à data do pagamento!');
+                return;
+            }
+            
+            if (diffDays > 15) {
+                alert('A data de vencimento deve ser no máximo 15 dias após a data do pagamento!');
+                return;
+            }
+            
+            // Criar objeto do pagamento
+            const pagamento = {
+                id: Date.now(),
+                dataPagamento: dataPagamento,
+                numeroDocumento: numeroDocumento,
+                nomeCliente: nomeCliente,
+                vencimento: vencimento,
+                valor: valor,
+                status: 'a_vencer' // Status inicial
+            };
+            
+            // Buscar pagamentos existentes no localStorage
+            let pagamentos = JSON.parse(localStorage.getItem('pagamentos')) || [];
+            
+            // Adicionar novo pagamento
+            pagamentos.push(pagamento);
+            
+            // Salvar no localStorage
+            localStorage.setItem('pagamentos', JSON.stringify(pagamentos));
+            
+            alert('Pagamento cadastrado com sucesso!');
+            
+            // Redirecionar para a lista de pagamentos
+            window.location.href = 'lista-pagamentos.html';
+        });
+    </script>
+</body>
+</html>

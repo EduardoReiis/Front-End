@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Pagamentos - Contas a Receber</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container container-wide">
+        <div class="card">
+            <div class="card-header">
+                <h1>Pagamentos Cadastrados</h1>
+                <p>Gerencie seus pagamentos a receber</p>
+            </div>
+            
+            <div class="table-actions">
+                <a href="adicionar-pagamento.html" class="btn btn-primary">+ Novo Pagamento</a>
+            </div>
+            
+            <div class="table-container">
+                <table id="tabelaPagamentos">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Cliente</th>
+                            <th>Data Pagamento</th>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        <!-- Dados serão inseridos via JavaScript -->
+                    </tbody>
+                </table>
+                
+                <div id="semPagamentos" class="empty-state" style="display: none;">
+                    <p>Nenhum pagamento cadastrado ainda.</p>
+                    <a href="adicionar-pagamento.html" class="btn btn-secondary">Cadastrar primeiro pagamento</a>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <a href="index.html" class="link">← Sair do sistema</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="modalEdicao" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Pagamento</h2>
+                <button class="modal-close" onclick="fecharModal()">&times;</button>
+            </div>
+            
+            <form id="formEdicao">
+                <input type="hidden" id="editId">
+                
+                <div class="form-group">
+                    <label for="editDocumento">Número do Documento</label>
+                    <input type="text" id="editDocumento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editCliente">Nome do Cliente</label>
+                    <input type="text" id="editCliente" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editDataPagamento">Data do Pagamento</label>
+                    <input type="date" id="editDataPagamento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editVencimento">Vencimento</label>
+                    <input type="date" id="editVencimento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editValor">Valor (R$)</label>
+                    <input type="number" id="editValor" step="0.01" min="0.01" required>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Status -->
+    <div id="modalStatus" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Alterar Status</h2>
+                <button class="modal-close" onclick="fecharModalStatus()">&times;</button>
+            </div>
+            
+            <form id="formStatus">
+                <input type="hidden" id="statusId">
+                
+                <div class="form-group">
+                    <label for="novoStatus">Selecione o novo status</label>
+                    <select id="novoStatus" required>
+                        <option value="a_vencer">A Vencer</option>
+                        <option value="vencida">Vencida</option>
+                        <option value="paga">Paga</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalStatus()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Atualizar Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Carregar e exibir pagamentos
+        function carregarPagamentos() {
+            const pagamentos = JSON.parse(localStorage.getItem('pagamentos')) || [];
+            const corpoTabela = document.getElementById('corpoTabela');
+            const semPagamentos = document.getElementById('semPagamentos');
+            const tabela = document.getElementById('tabelaPagamentos');
+            
+            // Atualizar status automático baseado na data
+            atualizarStatusAutomatico(pagamentos);
+            
+            // Ordenar por data de vencimento
+            pagamentos.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento));
+            
+            if (pagamentos.length === 0) {
+                tabela.style.display = 'none';
+                semPagamentos.style.display = 'block';
+                return;
+            }
+            
+            tabela.style.display = 'table';
+            semPagamentos.style.display = 'none';
+            
+            corpoTabela.innerHTML = '';
+            
+            pagamentos.forEach(pagamento => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${pagamento.numeroDocumento}</td>
+                    <td>${pagamento.nomeCliente}</td>
+                    <td>${formatarData(pagamento.dataPagamento)}</td>
+                    <td>${formatarData(pagamento.vencimento)}</td>
+                    <td>R$ ${pagamento.valor.toFixed(2).replace('.', ',')}</td>
+                    <td><span class="status-badge status-${pagamento.status}">${formatarStatus(pagamento.status)}</span></td>
+                    <td class="acoes">
+                        <button class="btn btn-small btn-secondary" onclick="abrirModalEdicao(${pagamento.id})">Editar</button>
+                        <button class="btn btn-small btn-primary" onclick="abrirModalStatus(${pagamento.id})">Status</button>
+                    </td>
+                `;
+                corpoTabela.appendChild(tr);
+            });
+        }
+
+        // Atualizar status automático
+        function atualizarStatusAutomatico(pagamentos) {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            let atualizado = false;
+            
+            pagamentos.forEach(pagamento => {
+                if (pagamento.status !== 'paga') {
+                    const vencimento = new Date(pagamento.vencimento);
+                    vencimento.setHours(0, 0, 0, 0);
+                    
+                    if (vencimento < hoje && pagamento.status !== 'vencida') {
+                        pagamento.status = 'vencida';
+                        atualizado = true;
+                    } else if (vencimento >= hoje && pagamento.status === 'vencida') {
+                        pagamento.status = 'a_vencer';
+                        atualizado = true;
+                    }
+                }
+            });
+            
+            if (atualizado) {
+                localStorage.setItem('pagamentos', JSON.stringify(pagamentos));
+            }
+        }
+
+        // Formatar data para exibição
+        function formatarData(dataString) {
+            const data = new Date(dataString + 'T00:00:00');
+            return data.toLocaleDateString('pt-BR');
+        }
+
+        // Formatar status para exibição
+        function formatarStatus(status) {
+            const statusMap = {
+                'a_vencer': 'A Vencer',
+                'vencida': 'Vencida',
+                'paga': 'Paga'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Buscar pagamento por ID
+        function buscarPagamento(id) {
+            const pagamentos = JSON.parse(localStorage.getItem('pagamentos')) || [];
+            return pagamentos.find(p => p.id === id);
+        }
+
+        // Abrir modal de edição
+        function abrirModalEdicao(id) {
+            const pagamento = buscarPagamento(id);
+            if (!pagamento) return;
+            
+            document.getElementById('editId').value = id;
+            document.getElementById('editDocumento').value = pagamento.numeroDocumento;
+            document.getElementById('editCliente').value = pagamento.nomeCliente;
+            document.getElementById('editDataPagamento').value = pagamento.dataPagamento;
+            document.getElementById('editVencimento').value = pagamento.vencimento;
+            document.getElementById('editValor').value = pagamento.valor;
+            
+            document.getElementById('modalEdicao').style.display = 'flex';
+        }
+
+        // Fechar modal de edição
+        function fecharModal() {
+            document.getElementById('modalEdicao').style.display = 'none';
+        }
+
+        // Abrir modal de status
+        function abrirModalStatus(id) {
+            const pagamento = buscarPagamento(id);
+            if (!pagamento) return;
+            
+            document.getElementById('statusId').value = id;
+            document.getElementById('novoStatus').value = pagamento.status;
+            
+            document.getElementById('modalStatus').style.display = 'flex';
+        }
+
+        // Fechar modal de status
+        function fecharModalStatus() {
+            document.getElementById('modalStatus').style.display = 'none';
+        }
+
+        // Salvar edição
+        document.getElementById('formEdicao').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('editId').value);
+            let pagamentos = JSON.parse(localStorage.getItem('pagamentos')) || [];
+            
+            const index = pagamentos.findIndex(p => p.id === id);
+            if (index === -1) return;
+            
+            pagamentos[index].numeroDocumento = document.getElementById('editDocumento').value.trim();
+            pagamentos[index].nomeCliente = document.getElementById('editCliente').value.trim();
+            pagamentos[index].dataPagamento = document.getElementById('editDataPagamento').value;
+            pagamentos[index].vencimento = document.getElementById('editVencimento').value;
+            pagamentos[index].valor = parseFloat(document.getElementById('editValor').value);
+            
+            localStorage.setItem('pagamentos', JSON.stringify(pagamentos));
+            
+            fecharModal();
+            carregarPagamentos();
+            alert('Pagamento atualizado com sucesso!');
+        });
+
+        // Salvar status
+        document.getElementById('formStatus').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = parseInt(document.getElementById('statusId').value);
+            const novoStatus = document.getElementById('novoStatus').value;
+            
+            let pagamentos = JSON.parse(localStorage.getItem('pagamentos')) || [];
+            
+            const index = pagamentos.findIndex(p => p.id === id);
+            if (index === -1) return;
+            
+            pagamentos[index].status = novoStatus;
+            
+            localStorage.setItem('pagamentos', JSON.stringify(pagamentos));
+            
+            fecharModalStatus();
+            carregarPagamentos();
+            alert('Status atualizado com sucesso!');
+        });
+
+        // Fechar modais ao clicar fora
+        window.addEventListener('click', function(e) {
+            if (e.target === document.getElementById('modalEdicao')) {
+                fecharModal();
+            }
+            if (e.target === document.getElementById('modalStatus')) {
+                fecharModalStatus();
+            }
+        });
+
+        // Carregar pagamentos ao iniciar a página
+        carregarPagamentos();
+    </script>
+</body>
+</html>

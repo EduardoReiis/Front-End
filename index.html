@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Contas a Receber</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Login</h1>
+            <form id="formLogin">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email" required placeholder="Digite seu e-mail">
+                </div>
+                <div class="form-group">
+                    <label for="senha">Senha</label>
+                    <input type="password" id="senha" name="senha" required placeholder="Digite sua senha">
+                </div>
+                <div id="mensagemErro" class="mensagem-erro" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+            </form>
+            <div class="links">
+                <a href="esqueci-senha.html">Esqueci minha senha</a>
+                <a href="cadastro.html">Criar conta</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('formLogin').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const senha = document.getElementById('senha').value;
+            const mensagemErro = document.getElementById('mensagemErro');
+            
+            // Buscar usuários cadastrados no localStorage
+            const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+            
+            // Verificar se existem usuários cadastrados
+            if (usuarios.length === 0) {
+                mensagemErro.textContent = 'Nenhum usuário cadastrado. Por favor, crie uma conta primeiro.';
+                mensagemErro.style.display = 'block';
+                mensagemErro.style.color = '#e74c3c';
+                return;
+            }
+            
+            // Buscar usuário pelo email e senha
+            const usuarioEncontrado = usuarios.find(user => 
+                user.email.toLowerCase() === email.toLowerCase() && user.senha === senha
+            );
+            
+            if (usuarioEncontrado) {
+                // Login bem-sucedido - salvar usuário logado
+                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioEncontrado));
+                
+                // Redirecionar para página de adicionar pagamentos
+                window.location.href = 'adicionar-pagamento.html';
+            } else {
+                // Verificar se o email existe mas a senha está errada
+                const emailExiste = usuarios.find(user => 
+                    user.email.toLowerCase() === email.toLowerCase()
+                );
+                
+                if (emailExiste) {
+                    mensagemErro.textContent = 'Senha incorreta. Tente novamente.';
+                } else {
+                    mensagemErro.textContent = 'Usuário não encontrado. Por favor, crie uma conta primeiro.';
+                }
+                mensagemErro.style.display = 'block';
+                mensagemErro.style.color = '#e74c3c';
+            }
+        });
+
+        // Limpar mensagem de erro quando o usuário começar a digitar
+        document.getElementById('email').addEventListener('input', limparErro);
+        document.getElementById('senha').addEventListener('input', limparErro);
+
+        function limparErro() {
+            document.getElementById('mensagemErro').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
